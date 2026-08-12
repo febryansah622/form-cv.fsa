@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -111,6 +112,7 @@ tbody tr.pad td.calc,tbody tr.pad td input{background:#fff}
 .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 .row input[type=url]{flex:1;min-width:220px;border:1px solid var(--line);background:var(--fill);padding:7px 9px;border-radius:5px}
 .hint{font-size:11px;color:var(--grey);margin-top:9px;line-height:1.6}
+.ok{background:#EAF4EC;border-left:3px solid #3E7D4E;padding:9px 13px;font-size:12px}
 .warn{background:#FBEAE8;border-left:3px solid #B3261E;padding:9px 13px;font-size:11.5px;margin-top:12px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:var(--maroon);
   color:#fff;padding:11px 20px;border-radius:7px;font-size:13px;z-index:80;
@@ -183,14 +185,15 @@ tbody tr.pad{display:none}
     <h3>CADANGAN DATA</h3>
     <div class="body">
       <div class="row">
-        <button class="btn" id="bBackup">Unduh cadangan (JSON)</button>
+        <button class="btn go" id="bArsip">Unduh arsip (bisa dibaca)</button>
         <button class="btn" id="bCsv">Unduh daftar item (CSV)</button>
-        <button class="btn" id="bRestore">Pulihkan dari cadangan</button>
-        <input type="file" id="fRestore" accept="application/json" hidden>
+        <button class="btn" id="bRestore">Pulihkan dari arsip</button>
+        <input type="file" id="fRestore" accept=".html,.htm,.json,text/html,application/json" hidden>
       </div>
       <div class="hint">
-        Data tersimpan di browser perangkat ini. Kalau riwayat browser dibersihkan atau perangkat diganti, data ikut hilang.
-        Unduh cadangan JSON secara rutin, atau sambungkan ke Google Sheets di bawah.
+        Arsip berupa berkas HTML: klik dua kali untuk membacanya sebagai lembar form biasa, dan berkas yang sama
+        bisa diunggah kembali di sini untuk memulihkan seluruh dokumen.
+        Data harian tersimpan di browser perangkat ini — kalau riwayat browser dibersihkan atau perangkat diganti, data ikut hilang.
       </div>
       <div class="warn" id="noStore" style="display:none">
         Browser ini memblokir penyimpanan lokal. Data hanya bertahan selama tab terbuka — unduh cadangan sebelum menutup.
@@ -201,12 +204,21 @@ tbody tr.pad{display:none}
   <div class="card">
     <h3>SINKRON KE GOOGLE SHEETS</h3>
     <div class="body">
-      <div class="row">
-        <input type="url" id="apiUrl" placeholder="Tempel URL Web App Apps Script di sini">
-        <button class="btn" id="bSaveUrl">Simpan URL</button>
-        <button class="btn go" id="bSync">Kirim semua dokumen</button>
+      <div id="syncAuto" style="display:none">
+        <div class="ok">Tersambung otomatis. Setiap dokumen yang disimpan langsung dikirim ke Google Sheets.</div>
+        <div class="row" style="margin-top:11px">
+          <button class="btn go" id="bSync">Kirim semua dokumen</button>
+          <button class="btn" id="bShowManual">Pakai URL lain di perangkat ini</button>
+        </div>
       </div>
-      <div class="hint">Setelah URL diisi, setiap dokumen yang Anda simpan juga dikirim ke Google Sheets. Tombol di atas untuk mengirim ulang seluruh dokumen yang sudah ada.</div>
+      <div id="syncManual">
+        <div class="row">
+          <input type="url" id="apiUrl" placeholder="Tempel URL Web App Apps Script di sini">
+          <button class="btn" id="bSaveUrl">Simpan URL</button>
+          <button class="btn go" id="bSync2">Kirim semua dokumen</button>
+        </div>
+        <div class="hint">Setelah URL diisi, setiap dokumen yang Anda simpan juga dikirim ke Google Sheets.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -214,6 +226,15 @@ tbody tr.pad{display:none}
 <div class="toast" id="toast"></div>
 
 <script>
+/* =========================================================
+   ISI SATU KALI DI SINI
+   Tempel URL Web App Apps Script (yang berakhiran /exec)
+   di antara tanda kutip. Setelah itu semua perangkat
+   tersambung otomatis tanpa perlu diisi satu per satu.
+   ========================================================= */
+const API_URL_BAWAAN = 'https://script.google.com/macros/s/AKfycbxK6BmZUoX1TPnd50A_xhYMjrZd8noMB5ObVAOvOMllZjCtNZxY1ArICXYNdpSOOnfX/exec';
+/* ========================================================= */
+
 /* =========================================================
    Penyimpanan — localStorage, dengan cadangan di memori
    ========================================================= */
@@ -469,6 +490,120 @@ function unduh(nama, isi, tipe) {
 }
 const stamp = () => new Date().toISOString().slice(0, 10);
 
+
+/* =========================================================
+   Arsip HTML — bisa dibaca langsung, bisa dipulihkan
+   ========================================================= */
+const LOGO_SRC = 'data:image/png;base64,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';
+
+function nilai(v) { return (v === '' || v == null) ? '<i class="k"></i>' : esc(v); }
+
+function lembarStatis(d, no, dari) {
+  const F = FORMS[d.kode];
+  if (!F) return '';
+  let h = `<section class="lb">
+    <div class="kop"><img src="${LOGO_SRC}" alt="">
+      <div><div class="co">CV. FALUZAJ SAECO ASMARADANA</div>
+      <div class="dv">PURCHASING · WAREHOUSE · DISTRIBUSI</div></div>
+      <div class="cd"><b>${d.kode}</b><span>Rev. 02</span></div></div>
+    <div class="tt"><b>${F.judul}</b><span>${F.rangkap}</span></div>
+    <div class="fl">`;
+  F.fields.forEach(([k, lab]) => {
+    h += `<div class="fi"><label>${lab.toUpperCase()}</label><div class="vl">${nilai(d.header[k])}</div></div>`;
+  });
+  h += '</div><table><thead><tr><th class="c">NO</th>';
+  F.cols.forEach(c => h += `<th>${c[1]}</th>`);
+  h += '</tr></thead><tbody>';
+  d.rows.forEach((r, i) => {
+    const cv = F.calc ? F.calc(r) : {};
+    h += `<tr><td class="c">${i + 1}</td>`;
+    F.cols.forEach(([k, , , kind]) => {
+      const v = kind === 'calc' ? RP(cv[k]) : (kind === 'num' ? RP(r[k]) : esc(r[k]));
+      h += `<td class="${kind === 'num' || kind === 'calc' ? 'n' : ''}">${v || '&nbsp;'}</td>`;
+    });
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+
+  if (F.ppn) {
+    const st = d.rows.reduce((a, r) => a + (+r.qty || 0) * (+r.harga || 0), 0);
+    const pj = Math.round(st * (+d.ppn || 0) / 100);
+    h += `<div class="tot"><div><span>Subtotal</span><b>Rp ${RP(st)}</b></div>
+      <div><span>PPN ${d.ppn}%</span><b>Rp ${RP(pj)}</b></div>
+      <div class="bg"><span>TOTAL</span><b>Rp ${RP(st + pj)}</b></div></div>`;
+  } else if (F.total) {
+    const t = d.rows.reduce((a, r) => {
+      const cv = F.calc ? F.calc(r) : {};
+      return a + (+(cv[F.total.col] ?? r[F.total.col]) || 0);
+    }, 0);
+    h += `<div class="tot"><div class="bg"><span>${F.total.label}</span><b>${RP(t)}</b></div></div>`;
+  }
+  if (F.catatan) h += `<div class="ct"><b>CATATAN WAJIB</b>${F.catatan.map(esc).join('<br>')}</div>`;
+  h += `<div class="sg" style="grid-template-columns:repeat(${F.signs.length},1fr)">`;
+  F.signs.forEach(([a, b]) => h += `<div class="sb"><div class="sh">${a}</div><div class="sr">${b}</div><div class="sl">nama &amp; tanggal</div></div>`);
+  h += `</div><div class="ft">Dokumen ${no} dari ${dari} · disimpan ${new Date(d.dibuat).toLocaleString('id-ID')} · ${d.id}</div>
+  </section>`;
+  return h;
+}
+
+function buatArsip(docs) {
+  const gaya = `
+  :root{--m:#5A1520;--ml:#7B2231;--g:#C9A227;--cr:#F8F4EA;--cd:#EDE4D2;--i:#241A1C;--gy:#6E6560;--ln:#B9AFA6}
+  *{box-sizing:border-box}body{margin:0;background:var(--cr);color:var(--i);
+    font:14px/1.5 "Poppins",-apple-system,"Segoe UI",Roboto,sans-serif}
+  .hd{background:var(--m);color:#fff;padding:18px 24px;border-bottom:3px solid var(--g)}
+  .hd b{font-size:16px;letter-spacing:.05em}.hd div{font-size:11px;color:#E6CE7E;letter-spacing:.14em;margin-top:3px}
+  .hd p{margin:12px 0 0;font-size:12px;color:#EAE6DE;max-width:720px;line-height:1.6}
+  .wr{max-width:900px;margin:22px auto 60px;padding:0 16px}
+  .lb{background:#fff;border:1px solid var(--cd);padding:24px 26px 26px;margin-bottom:22px;
+    box-shadow:0 1px 3px rgba(36,26,28,.08)}
+  .kop{display:flex;gap:12px;align-items:flex-start;border-bottom:1px solid var(--cd);padding-bottom:11px}
+  .kop img{width:42px;height:42px}.co{font-weight:700;color:var(--m);font-size:14.5px;letter-spacing:.04em}
+  .dv{font-size:9px;color:var(--gy);letter-spacing:.15em;margin-top:2px}
+  .cd{margin-left:auto;text-align:center;border:1.5px solid var(--m);border-radius:4px;padding:4px 14px}
+  .cd b{display:block;color:var(--m);font-size:19px;line-height:1}.cd span{font-size:8px;color:var(--gy)}
+  .tt{background:var(--m);color:#fff;padding:8px 13px;margin-top:13px;display:flex;justify-content:space-between;gap:12px}
+  .tt b{font-size:14px}.tt span{font-size:9px;color:#E6CE7E;letter-spacing:.14em;font-weight:600;white-space:nowrap}
+  .fl{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 16px;margin:15px 0 16px}
+  .fi label{display:block;font-size:8px;font-weight:700;color:var(--ml);letter-spacing:.11em}
+  .vl{border-bottom:1px solid var(--ln);padding:3px 2px 4px;min-height:20px;font-size:13px}
+  .k{display:inline-block;width:60%;border-bottom:1px dotted var(--ln)}
+  table{width:100%;border-collapse:collapse;table-layout:fixed}
+  th{background:var(--m);color:#fff;font-size:8.5px;letter-spacing:.08em;padding:7px 5px;text-align:left;border:1px solid var(--m)}
+  td{border:1px solid var(--ln);padding:5px 7px;font-size:12.5px;word-break:break-word}
+  td.c{text-align:center;color:var(--gy);font-size:11px;width:32px}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  .tot{margin:11px 0 0 auto;width:270px}
+  .tot div{display:flex;justify-content:space-between;gap:14px;padding:4px 9px;font-size:12.5px}
+  .tot .bg{background:var(--cr);border:1px solid var(--m);font-weight:700;color:var(--m)}
+  .ct{background:var(--cr);border-left:3px solid var(--g);padding:9px 13px;margin-top:15px;font-size:11px;line-height:1.55}
+  .ct b{display:block;color:var(--m);font-size:8.5px;letter-spacing:.11em;margin-bottom:3px}
+  .sg{display:grid;gap:11px;margin-top:16px}
+  .sb{border:1px solid var(--ln)}
+  .sh{background:var(--cr);border-bottom:1px solid var(--ln);text-align:center;padding:4px;font-size:9px;font-weight:700;color:var(--m);letter-spacing:.08em}
+  .sr{text-align:center;font-size:9px;color:var(--gy);padding:4px 0 30px}
+  .sl{border-top:1px dotted var(--ln);margin:0 11px 9px;text-align:center;font-size:8.5px;color:var(--gy);padding-top:3px}
+  .ft{margin-top:13px;border-top:1px solid var(--cd);padding-top:7px;font-size:9.5px;color:var(--gy);
+    font-family:ui-monospace,Menlo,Consolas,monospace}
+  @media(max-width:640px){.fl{grid-template-columns:1fr 1fr}.wr{padding:0 8px}.lb{padding:15px}}
+  @page{size:A4 portrait;margin:11mm}
+  @media print{body{background:#fff}.hd{display:none}.wr{margin:0;padding:0;max-width:none}
+    .lb{border:0;box-shadow:none;padding:0;margin:0;page-break-after:always}}`;
+
+  const isi = JSON.stringify({ versi: 2, dibuat: new Date().toISOString(), dokumen: docs })
+    .replace(/</g, '\\u003c');
+
+  return `<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Arsip Form Lapangan — CV. FSA — ${stamp()}</title><style>${gaya}</style></head><body>
+<div class="hd"><b>ARSIP FORM LAPANGAN</b><div>CV. FALUZAJ SAECO ASMARADANA · DAPUR AL-FATIH</div>
+<p>${docs.length} dokumen, diarsipkan ${new Date().toLocaleString('id-ID')}.
+Berkas ini bisa dibaca langsung, dicetak, dan diunggah kembali ke aplikasi form untuk memulihkan seluruh dokumen.</p></div>
+<div class="wr">${docs.map((d, i) => lembarStatis(d, i + 1, docs.length)).join('')}</div>
+<script type="application/json" id="fsa-data">${isi}<\/script></body></html>`;
+}
+
 /* =========================================================
    Aksi
    ========================================================= */
@@ -489,11 +624,11 @@ el('bSave').addEventListener('click', () => {
   kirim([rec], true);
 });
 
-el('bBackup').addEventListener('click', () => {
+el('bArsip').addEventListener('click', () => {
   const d = load();
-  if (!d.length) return toast('Belum ada yang bisa dicadangkan');
-  unduh(`cadangan-form-fsa-${stamp()}.json`, JSON.stringify({ versi: 1, dibuat: new Date().toISOString(), dokumen: d }, null, 2), 'application/json');
-  toast('Cadangan diunduh');
+  if (!d.length) return toast('Belum ada yang bisa diarsipkan');
+  unduh(`arsip-form-fsa-${stamp()}.html`, buatArsip(d), 'text/html;charset=utf-8');
+  toast(d.length + ' dokumen diarsipkan');
 });
 
 el('bCsv').addEventListener('click', () => {
@@ -514,7 +649,10 @@ el('fRestore').addEventListener('change', e => {
   const rd = new FileReader();
   rd.onload = () => {
     try {
-      const j = JSON.parse(rd.result);
+      let teks = rd.result;
+      const m = teks.match(/<script type="application\/json" id="fsa-data">([\s\S]*?)<\/script>/);
+      if (m) teks = m[1].replace(/\\u003c/g, '<');
+      const j = JSON.parse(teks);
       const masuk = Array.isArray(j) ? j : j.dokumen;
       if (!Array.isArray(masuk)) throw 0;
       const ada = load(), id = new Set(ada.map(x => x.id));
@@ -522,20 +660,31 @@ el('fRestore').addEventListener('change', e => {
       masuk.forEach(x => { if (x && x.id && !id.has(x.id)) { ada.push(x); n++; } });
       save(ada); renderDocs();
       toast(n ? n + ' dokumen dipulihkan' : 'Semua dokumen sudah ada');
-    } catch (_) { toast('Berkas cadangan tidak terbaca'); }
+    } catch (_) { toast('Berkas arsip tidak terbaca'); }
     e.target.value = '';
   };
   rd.readAsText(f);
 });
 
 /* ---- sinkron Google Sheets ---- */
-el('apiUrl').value = store.get(URLK) || '';
-el('bSaveUrl').addEventListener('click', () => { store.set(URLK, el('apiUrl').value.trim()); toast('URL disimpan'); });
-el('bSync').addEventListener('click', () => { const d = load(); if (!d.length) return toast('Belum ada data'); kirim(d, false); });
+const kirimSemua = () => { const d = load(); if (!d.length) return toast('Belum ada data'); kirim(d, false); };
+const pakaiManual = () => !!(store.get(URLK) || '').trim();
+
+function aturSync() {
+  const auto = API_URL_BAWAAN.trim() && !pakaiManual();
+  el('syncAuto').style.display = auto ? 'block' : 'none';
+  el('syncManual').style.display = auto ? 'none' : 'block';
+  el('apiUrl').value = store.get(URLK) || '';
+}
+el('bSaveUrl').addEventListener('click', () => { store.set(URLK, el('apiUrl').value.trim()); aturSync(); toast('URL disimpan'); });
+el('bShowManual').addEventListener('click', () => { el('syncAuto').style.display = 'none'; el('syncManual').style.display = 'block'; });
+el('bSync').addEventListener('click', kirimSemua);
+el('bSync2').addEventListener('click', kirimSemua);
+aturSync();
 
 function kirim(docs, diam) {
-  const u = (store.get(URLK) || '').trim();
-  if (!u) { if (!diam) toast('Isi URL Apps Script dulu'); return; }
+  const u = ((store.get(URLK) || '').trim() || API_URL_BAWAAN.trim());
+  if (!u) { if (!diam) toast('URL Apps Script belum diisi'); return; }
   fetch(u, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ dokumen: docs }) })
     .then(() => toast(docs.length + ' dokumen dikirim ke Google Sheets'))
     .catch(() => toast('Gagal mengirim — periksa URL dan izin akses Web App'));
