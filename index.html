@@ -78,6 +78,7 @@ tbody tr.pad td.calc,tbody tr.pad td input{background:#fff}
 .addrow{background:var(--cream);border:1px dashed var(--line);color:var(--maroon);
   border-radius:6px;padding:8px 15px;cursor:pointer;font-weight:600}
 .addrow:hover{background:var(--cream-d)}
+.paste{font-size:10.5px;color:var(--grey);margin-top:7px;max-width:330px;line-height:1.5}
 .totals{margin-left:auto;min-width:270px}
 .totals div{display:flex;justify-content:space-between;gap:16px;padding:5px 10px;font-size:13px}
 .totals div.big{background:var(--cream);border:1px solid var(--maroon);font-weight:700;color:var(--maroon)}
@@ -208,6 +209,7 @@ tbody tr.pad{display:none}
         <div class="ok">Tersambung otomatis. Setiap dokumen yang disimpan langsung dikirim ke Google Sheets.</div>
         <div class="row" style="margin-top:11px">
           <button class="btn go" id="bSync">Kirim semua dokumen</button>
+          <button class="btn" id="bMuat">Muat dokumen tim</button>
           <button class="btn" id="bShowManual">Pakai URL lain di perangkat ini</button>
         </div>
       </div>
@@ -216,8 +218,10 @@ tbody tr.pad{display:none}
           <input type="url" id="apiUrl" placeholder="Tempel URL Web App Apps Script di sini">
           <button class="btn" id="bSaveUrl">Simpan URL</button>
           <button class="btn go" id="bSync2">Kirim semua dokumen</button>
+          <button class="btn" id="bMuat2">Muat dokumen tim</button>
         </div>
-        <div class="hint">Setelah URL diisi, setiap dokumen yang Anda simpan juga dikirim ke Google Sheets.</div>
+        <div class="hint">Setelah URL diisi, setiap dokumen yang Anda simpan juga dikirim ke Google Sheets.
+        Tombol <b>Muat dokumen tim</b> menarik dokumen yang dibuat rekan lain ke perangkat ini.</div>
       </div>
     </div>
   </div>
@@ -277,8 +281,8 @@ const FORMS = {
   'F-07': {
     judul: 'PERMINTAAN PEMBELIAN · PURCHASE REQUISITION', rangkap: 'RANGKAP 2',
     sub: 'Disusun Purchasing setelah stok gudang diperiksa. Wajib disetujui sebelum PO terbit.',
-    fields: [['nopr', 'No. PR', 4], ['tgl', 'Tanggal', 3, 'date'], ['pakai', 'Untuk Pemakaian', 3, 'date'],
-             ['ref', 'Merujuk F-01 No.', 4], ['oleh', 'Diajukan oleh', 4], ['sup', 'Supplier Diusulkan', 6]],
+    fields: [['nopr', 'No. PR', 2], ['tgl', 'Tanggal', 2, 'date'], ['pakai', 'Untuk Pemakaian', 2, 'date'],
+             ['oleh', 'Diajukan oleh', 3], ['sup', 'Supplier Diusulkan', 3]],
     cols: [['kode', 'KODE', 12], ['nama', 'NAMA BARANG', 27], ['sat', 'SAT', 6],
            ['qty', 'QTY DIMINTA', 11, 'num'], ['stok', 'STOK GUDANG', 11, 'num'],
            ['beli', 'QTY BELI', 10, 'calc'], ['harga', 'EST. HARGA', 12, 'num'],
@@ -293,8 +297,8 @@ const FORMS = {
   'F-08': {
     judul: 'PESANAN PEMBELIAN · PURCHASE ORDER', rangkap: 'RANGKAP 3',
     sub: 'Dokumen resmi ke supplier. Barang datang tanpa PO tidak boleh diterima.',
-    fields: [['nopo', 'No. PO', 4], ['tgl', 'Tanggal PO', 3, 'date'], ['ref', 'Merujuk PR No.', 5],
-             ['sup', 'Nama Supplier', 5], ['kontak', 'Kontak / Telepon', 4], ['termin', 'Termin Pembayaran', 3],
+    fields: [['nopo', 'No. PO', 3], ['tgl', 'Tanggal PO', 2, 'date'], ['ref', 'Merujuk PR No.', 3],
+             ['sup', 'Nama Supplier', 4],
              ['alamat', 'Alamat Kirim', 8], ['kirim', 'Tanggal Kirim Diminta', 4, 'date']],
     cols: [['kode', 'KODE', 14], ['nama', 'NAMA BARANG', 36], ['sat', 'SAT', 7],
            ['qty', 'QTY', 11, 'num'], ['harga', 'HARGA SATUAN', 16, 'num'], ['jml', 'JUMLAH', 16, 'calc']],
@@ -306,12 +310,27 @@ const FORMS = {
               'Pengiriman wajib disertai nota atau faktur yang mencantumkan nomor PO.'],
     judulDoc: d => d.nopo || d.sup || 'PO tanpa nomor'
   },
+  'F-02': {
+    judul: 'BUKTI TERIMA BARANG SUPPLIER', rangkap: 'RANGKAP 2',
+    sub: 'Daftar item disiapkan dari PO. Qty Fisik diisi sendiri saat menimbang, bukan disalin dari nota.',
+    fields: [['tgl', 'Tanggal', 2, 'date'], ['jam', 'Jam Terima', 2, 'time'],
+             ['sup', 'Nama Supplier', 4], ['nopo', 'No. PO / Nota', 4]],
+    cols: [['kode', 'KODE', 12], ['nama', 'NAMA BARANG', 28], ['sat', 'SAT', 6],
+           ['nota', 'QTY PO / NOTA', 12, 'num'], ['fisik', 'QTY FISIK', 12, 'num'],
+           ['sel', 'SELISIH', 9, 'calc'], ['mutu', 'MUTU', 11], ['tolak', 'QTY TOLAK', 10, 'num']],
+    calc: r => ({ sel: r.fisik === '' ? '' : (+r.fisik || 0) - (+r.nota || 0) }),
+    signs: [['DISERAHKAN', 'Supplier / Pengantar'], ['DITERIMA', 'Stockkeeper'], ['DIKETAHUI', 'Supervisor']],
+    catatan: ['Item kunci wajib ditimbang ulang. Angka nota supplier tidak boleh disalin begitu saja.',
+              'Barang di luar PO dan kelebihan kirim di luar Qty PO ditolak dan tidak diterima.',
+              'Barang ditolak dicatat di kolom Qty Tolak, dikembalikan bersama nota, disimpan di zona K.'],
+    judulDoc: d => d.sup || d.nopo || 'Terima tanpa supplier'
+  },
   'F-04': {
     judul: 'SURAT JALAN & SERAH TERIMA BAHAN', rangkap: 'RANGKAP 3',
     sub: 'Qty Terima diisi penerima di lokasi, bukan disalin dari Qty Kirim.',
-    fields: [['nosj', 'No. Surat Jalan', 4], ['tgl', 'Tanggal', 3, 'date'], ['unit', 'Unit Bisnis Tujuan', 5],
-             ['driver', 'Nama Driver', 4], ['pol', 'No. Polisi', 3], ['brkt', 'Jam Berangkat', 3, 'time'],
-             ['tiba', 'Jam Tiba', 3, 'time']],
+    fields: [['nosj', 'No. Surat Jalan', 3], ['tgl', 'Tanggal', 2, 'date'], ['unit', 'Unit Bisnis Tujuan', 4],
+             ['driver', 'Nama Driver', 3],
+             ['pol', 'No. Polisi', 4], ['brkt', 'Jam Berangkat', 4, 'time'], ['tiba', 'Jam Tiba', 4, 'time']],
     cols: [['kunci', 'KUNCI', 7], ['kode', 'KODE', 12], ['nama', 'NAMA BARANG', 27], ['sat', 'SAT', 6],
            ['kirim', 'QTY KIRIM', 11, 'num'], ['terima', 'QTY TERIMA', 11, 'num'],
            ['sel', 'SELISIH', 10, 'calc'], ['kd', 'KODE SELISIH', 12]],
@@ -324,12 +343,10 @@ const FORMS = {
   },
   'F-09': {
     judul: 'SURAT JALAN & SERAH TERIMA MAKANAN', rangkap: 'RANGKAP 3',
-    sub: 'Untuk makanan matang ke customer. Kendali suhu wajib diisi sebelum berangkat.',
-    fields: [['nosj', 'No. Surat Jalan Makanan', 5], ['tgl', 'Tanggal Kirim', 3, 'date'], ['jamacara', 'Jam Acara', 4, 'time'],
-             ['cust', 'Nama Customer / Acara', 6], ['pic', 'PIC Penerima', 3], ['hp', 'No. HP Penerima', 3],
-             ['alamat', 'Alamat Pengiriman', 8], ['driver', 'Nama Driver', 4],
-             ['masak', 'Jam Selesai Masak', 3, 'time'], ['sb', 'Suhu Berangkat (°C)', 3],
-             ['st', 'Suhu Tiba (°C)', 3], ['batas', 'Batas Aman Konsumsi', 3]],
+    sub: 'Untuk makanan matang ke customer. Bahan baku ke unit bisnis memakai F-04.',
+    fields: [['nosj', 'No. Surat Jalan Makanan', 3], ['tgl', 'Tanggal Kirim', 2, 'date'],
+             ['jamacara', 'Jam Acara', 2, 'time'], ['cust', 'Nama Customer / Acara', 5],
+             ['hp', 'No. HP Penerima', 3], ['alamat', 'Alamat Pengiriman', 6], ['driver', 'Nama Driver', 3]],
     cols: [['menu', 'MENU / ITEM', 30], ['kemas', 'KEMASAN', 13], ['kirim', 'JUMLAH KIRIM', 12, 'num'],
            ['terima', 'JUMLAH TERIMA', 13, 'num'], ['sel', 'SELISIH', 10, 'calc'],
            ['kondisi', 'KONDISI', 11], ['ket', 'KETERANGAN', 11]],
@@ -402,7 +419,8 @@ function render() {
   }
   h += '</tbody></table></div>';
 
-  h += '<div class="tfoot"><button class="addrow noprint" id="bAdd">+ Tambah baris</button>';
+  h += '<div class="tfoot"><div class="noprint"><button class="addrow" id="bAdd">+ Tambah baris</button>'
+    + '<div class="paste">Bisa tempel banyak baris sekaligus: salin dari Excel atau Sheets, klik satu sel, lalu Ctrl+V. Baris ditambah otomatis.</div></div>';
   if (F.ppn) {
     const st = S.rows.reduce((a, r) => a + (+r.qty || 0) * (+r.harga || 0), 0);
     const pj = Math.round(st * (+S.ppn || 0) / 100);
@@ -442,6 +460,28 @@ function wire() {
       if (F.calc || F.total || F.ppn) { const a = document.activeElement; const p = a.selectionStart; render(); const n = el('sheet').querySelector(`[data-r="${r}"][data-k="${k}"]`); if (n) { n.focus(); try { n.setSelectionRange(p, p); } catch (_) { } } }
       else store.set(DRAFT, JSON.stringify(S));
     }));
+  el('sheet').querySelectorAll('[data-r]').forEach(i => i.addEventListener('paste', e => {
+    const txt = (e.clipboardData || window.clipboardData).getData('text') || '';
+    if (!/[\t\r\n]/.test(txt)) return;          // tempelan satu sel, biarkan normal
+    e.preventDefault();
+    const F = FORMS[S.kode];
+    const r0 = +e.target.dataset.r;
+    const c0 = F.cols.findIndex(c => c[0] === e.target.dataset.k);
+    const baris = txt.replace(/\r/g, '').split('\n');
+    while (baris.length && baris[baris.length - 1].trim() === '') baris.pop();
+    baris.forEach((ln, ri) => {
+      const sel = ln.split('\t');
+      const r = r0 + ri;
+      while (S.rows.length <= r) S.rows.push(rowBlank(S.kode));
+      sel.forEach((v, ci) => {
+        const kol = F.cols[c0 + ci];
+        if (kol && kol[3] !== 'calc') S.rows[r][kol[0]] = v.trim();
+      });
+    });
+    render();
+    toast(baris.length + ' baris ditempel');
+  }));
+
   el('sheet').querySelectorAll('[data-del]').forEach(b =>
     b.addEventListener('click', () => { if (S.rows.length > 1) S.rows.splice(+b.dataset.del, 1); render(); }));
   const add = el('bAdd');
@@ -464,7 +504,8 @@ function renderDocs() {
     const tg = new Date(x.dibuat).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
     return `<div class="doc"><span class="k">${x.kode}</span><span class="t">${esc(t)}</span>
       <span class="d">${x.rows.length} item · ${tg}</span>
-      <button data-open="${x.id}">Buka</button><button data-dup="${x.id}">Salin</button>
+      <button data-open="${x.id}">Buka</button><button data-pdf="${x.id}">PDF</button>
+      <button data-dup="${x.id}">Salin</button>${x.kode === 'F-08' ? `<button data-f02="${x.id}">&rarr; F-02</button>` : ''}
       <button data-rm="${x.id}">Hapus</button></div>`;
   }).join('');
   box.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => {
@@ -475,6 +516,25 @@ function renderDocs() {
     const o = load().find(x => x.id === b.dataset.dup);
     S = JSON.parse(JSON.stringify(o)); S.id = blank(S.kode).id; S.dibuat = new Date().toISOString();
     el('pick').value = S.kode; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); toast('Salinan dibuat — belum tersimpan');
+  }));
+  box.querySelectorAll('[data-pdf]').forEach(b => b.addEventListener('click', () => {
+    S = JSON.parse(JSON.stringify(load().find(x => x.id === b.dataset.pdf)));
+    el('pick').value = S.kode; render();
+    setTimeout(() => window.print(), 250);
+  }));
+  box.querySelectorAll('[data-f02]').forEach(b => b.addEventListener('click', () => {
+    const po = load().find(x => x.id === b.dataset.f02);
+    const baru = blank('F-02');
+    baru.header.sup = po.header.sup || '';
+    baru.header.nopo = po.header.nopo || '';
+    baru.rows = po.rows.filter(r => (r.nama || '').trim() !== '').map(r => ({
+      kode: r.kode || '', nama: r.nama || '', sat: r.sat || '',
+      nota: r.qty || '', fisik: '', sel: '', mutu: '', tolak: ''
+    }));
+    if (!baru.rows.length) baru.rows = [rowBlank('F-02')];
+    S = baru; el('pick').value = 'F-02'; render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast(S.rows.length + ' item disiapkan dari PO — belum tersimpan');
   }));
   box.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => {
     if (!confirm('Hapus dokumen ini?')) return;
@@ -618,6 +678,7 @@ window.addEventListener('afterprint', () =>
 
 el('bSave').addEventListener('click', () => {
   const d = load(), i = d.findIndex(x => x.id === S.id);
+  S.diubah = new Date().toISOString();
   const rec = JSON.parse(JSON.stringify(S));
   if (i >= 0) d[i] = rec; else d.push(rec);
   save(d); renderDocs(); toast('Tersimpan · ' + d.length + ' dokumen');
@@ -680,7 +741,34 @@ el('bSaveUrl').addEventListener('click', () => { store.set(URLK, el('apiUrl').va
 el('bShowManual').addEventListener('click', () => { el('syncAuto').style.display = 'none'; el('syncManual').style.display = 'block'; });
 el('bSync').addEventListener('click', kirimSemua);
 el('bSync2').addEventListener('click', kirimSemua);
+el('bMuat').addEventListener('click', muatTim);
+el('bMuat2').addEventListener('click', muatTim);
 aturSync();
+
+function muatTim() {
+  const u = ((store.get(URLK) || '').trim() || API_URL_BAWAAN.trim());
+  if (!u) return toast('URL Apps Script belum diisi');
+  toast('Mengambil dokumen tim...');
+  fetch(u + (u.indexOf('?') < 0 ? '?' : '&') + 'aksi=daftar&t=' + Date.now())
+    .then(r => r.json())
+    .then(j => {
+      const masuk = (j && j.dokumen) || [];
+      if (!masuk.length) return toast('Belum ada dokumen di Google Sheets');
+      const ada = load(), peta = new Map(ada.map(x => [x.id, x]));
+      let baru = 0, segar = 0;
+      masuk.forEach(x => {
+        if (!x || !x.id || !FORMS[x.kode]) return;
+        const lama = peta.get(x.id);
+        if (!lama) { ada.push(x); baru++; }
+        else if ((x.diubah || x.dibuat) > (lama.diubah || lama.dibuat)) {
+          ada[ada.indexOf(lama)] = x; segar++;
+        }
+      });
+      save(ada); renderDocs();
+      toast(baru + ' dokumen baru, ' + segar + ' diperbarui');
+    })
+    .catch(() => toast('Gagal memuat — periksa URL dan izin Web App'));
+}
 
 function kirim(docs, diam) {
   const u = ((store.get(URLK) || '').trim() || API_URL_BAWAAN.trim());
