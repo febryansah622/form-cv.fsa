@@ -11,7 +11,7 @@
   --cream:#F8F4EA; --cream-d:#EDE4D2; --paper:#FFFFFF; --ink:#241A1C;
   --grey:#6E6560; --line:#B9AFA6; --fill:#FFF6D5; --auto:#EDEDED;
   --sans:"Poppins",-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
-  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --mono:"DejaVu Sans Mono",Menlo,Consolas,"Courier New",monospace;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -710,11 +710,40 @@ function namaBerkas(d) {
   return (d.kode + ' ' + j).replace(/[\\/:*?"<>|]+/g, '-').slice(0, 60);
 }
 
+
+/* Kotak input diubah sementara jadi teks biasa sebelum difoto.
+   Tanpa ini, isi input terpotong di bagian bawah pada hasil gambar. */
+function bekukanInput(aktif) {
+  const lembar = el('sheet');
+  if (aktif) {
+    lembar.querySelectorAll('input').forEach(i => {
+      const g = getComputedStyle(i);
+      const sp = document.createElement('span');
+      sp.className = 'beku';
+      sp.textContent = i.value;
+      sp.style.cssText = [
+        'display:block', 'box-sizing:border-box', 'white-space:pre', 'overflow:hidden',
+        'width:' + g.width, 'height:' + g.height, 'line-height:' + g.height,
+        'padding:0 ' + g.paddingRight + ' 0 ' + g.paddingLeft,
+        'font-family:' + g.fontFamily, 'font-size:' + g.fontSize, 'font-weight:' + g.fontWeight,
+        'text-align:' + g.textAlign, 'color:' + g.color,
+        'background:#fff', 'border:0',
+        'border-bottom:' + g.borderBottomWidth + ' ' + g.borderBottomStyle + ' ' + g.borderBottomColor,
+      ].join(';');
+      i.style.display = 'none';
+      i.insertAdjacentElement('afterend', sp);
+    });
+  } else {
+    lembar.querySelectorAll('span.beku').forEach(sp => sp.remove());
+    lembar.querySelectorAll('input').forEach(i => { i.style.display = ''; });
+  }
+}
+
 async function jadikanGambar(diam) {
   if (typeof html2canvas !== 'function') { toast('Pustaka gambar gagal dimuat'); return; }
   const lembar = el('sheet');
-  document.querySelectorAll('.sheet input').forEach(i => i.classList.toggle('blank', i.value === ''));
   document.body.classList.add('shot');
+  bekukanInput(true);
   if (!diam) toast('Membuat gambar...');
   try {
     const kanvas = await html2canvas(lembar, {
@@ -737,8 +766,8 @@ async function jadikanGambar(diam) {
   } catch (err) {
     toast('Gagal membuat gambar');
   } finally {
+    bekukanInput(false);
     document.body.classList.remove('shot');
-    document.querySelectorAll('.sheet input').forEach(i => i.classList.remove('blank'));
   }
 }
 
